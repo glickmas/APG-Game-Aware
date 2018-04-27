@@ -1,7 +1,9 @@
 using UnityEngine;
+using UnityEngine.Networking;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Collections;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -31,6 +33,8 @@ class NullNetwork : NetworkChannel{
 public class TwitchNetworking:MonoBehaviour {
 
     [Header("Main Features")]
+
+    public string ServerURL;
 
     [Tooltip("")]
     public bool UseTwitchIRCTraffic = true;
@@ -251,7 +255,9 @@ public class TwitchNetworking:MonoBehaviour {
 
         if ((time % 60) == 0){
             if (UseSingleMachineTestNetworking){
-                System.IO.File.WriteAllText(SingleMachineTestNetworkingDirectory + Path.DirectorySeparatorChar + "test" + Mathf.Floor(time / 60) + ".txt", cachedMetaData.ToString());
+
+                StartCoroutine(UploadToServer(Mathf.Floor(time / 60).ToString(), cachedMetaData.ToString()));
+                //System.IO.File.WriteAllText(SingleMachineTestNetworkingDirectory + Path.DirectorySeparatorChar + "test" + Mathf.Floor(time / 60) + ".txt", cachedMetaData.ToString());
             }
             cachedMetaData.Length = 0;
         }
@@ -260,6 +266,25 @@ public class TwitchNetworking:MonoBehaviour {
 
         // make this cache a message
         // then send the entire message in its FixedUpdate function
+    }
+
+    IEnumerator UploadToServer(string frameInfo,string metaData)
+    {
+        WWWForm form = new WWWForm();
+        form.AddField("frameInfo", frameInfo);
+        form.AddField("cachedMeta", metaData);
+        
+        UnityWebRequest www = UnityWebRequest.Post(ServerURL, form);
+        yield return www.SendWebRequest();
+
+        if (www.isNetworkError || www.isHttpError)
+        {
+            Debug.Log(www.error);
+        }
+        else
+        {
+            Debug.Log("Form upload complete!");
+        }
     }
 
     public void WriteMessageToClient<T>(string msg, T parms) {
@@ -336,8 +361,8 @@ public class TwitchNetworking:MonoBehaviour {
         FrameNumber.active = UseMetadata;
 
         if (UseSingleMachineTestNetworking){
-            System.IO.DirectoryInfo di = new DirectoryInfo(SingleMachineTestNetworkingDirectory);
-            foreach (FileInfo file in di.GetFiles()) file.Delete();
+            //System.IO.DirectoryInfo di = new DirectoryInfo(SingleMachineTestNetworkingDirectory);
+            //foreach (FileInfo file in di.GetFiles()) file.Delete();
         }
 
         InitIRCChat();
