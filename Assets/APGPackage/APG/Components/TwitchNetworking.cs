@@ -256,7 +256,7 @@ public class TwitchNetworking:MonoBehaviour {
         if ((time % 60) == 0){
             if (UseSingleMachineTestNetworking){
 
-                StartCoroutine(UploadToServer(Mathf.Floor(time / 60).ToString(), cachedMetaData.ToString()));
+                StartCoroutine(UpdatePostToServer(Mathf.Floor(time / 60).ToString(), cachedMetaData.ToString()));
                 //System.IO.File.WriteAllText(SingleMachineTestNetworkingDirectory + Path.DirectorySeparatorChar + "test" + Mathf.Floor(time / 60) + ".txt", cachedMetaData.ToString());
             }
             cachedMetaData.Length = 0;
@@ -268,9 +268,28 @@ public class TwitchNetworking:MonoBehaviour {
         // then send the entire message in its FixedUpdate function
     }
 
-    IEnumerator UploadToServer(string frameInfo,string metaData)
+    IEnumerator InitPostToServer()
     {
         WWWForm form = new WWWForm();
+        form.AddField("command", "init");
+        
+        UnityWebRequest www = UnityWebRequest.Post(ServerURL, form);
+        yield return www.SendWebRequest();
+
+        if (www.isNetworkError || www.isHttpError)
+        {
+            Debug.Log(www.error);
+        }
+        else
+        {
+            Debug.Log("Form upload complete!");
+        }
+    }
+
+    IEnumerator UpdatePostToServer(string frameInfo,string metaData)
+    {
+        WWWForm form = new WWWForm();
+        form.AddField("command", "update");
         form.AddField("frameInfo", frameInfo);
         form.AddField("cachedMeta", metaData);
         
@@ -363,6 +382,8 @@ public class TwitchNetworking:MonoBehaviour {
         if (UseSingleMachineTestNetworking){
             //System.IO.DirectoryInfo di = new DirectoryInfo(SingleMachineTestNetworkingDirectory);
             //foreach (FileInfo file in di.GetFiles()) file.Delete();
+
+            StartCoroutine(InitPostToServer());
         }
 
         InitIRCChat();
